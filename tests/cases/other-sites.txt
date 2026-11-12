@@ -1,0 +1,4 @@
+https://www.saucedemo.com | Log in with username standard_user and password secret_sauce and verify the products page is shown
+https://www.saucedemo.com | Log in with username standard_user and password wrong-password-123 and verify an error message is shown
+https://the-internet.herokuapp.com/login | Log in with username tomsmith and password SuperSecretPassword! and verify the page says You logged into a secure area
+https://the-internet.herokuapp.com/add_remove_elements/ | Click the Add Element button and verify a Delete button appears

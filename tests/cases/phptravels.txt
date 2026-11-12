@@ -1,0 +1,4 @@
+# One test per line: START_URL | plain-English test. {{name}} is filled from TEST_VAR_name in .env.
+https://phptravels.net/login | Log in as a customer with email {{customer_email}} and password {{customer_password}} and verify the dashboard is shown
+https://phptravels.net/login | Log in as a customer with email {{customer_email}} and password wrong-password-123 and verify an error message is shown and the dashboard is not shown
+https://phptravels.net/login | Log in as a customer with email {{customer_email}} and password {{customer_password}} and verify the page shows the text Welcome to the Moon
