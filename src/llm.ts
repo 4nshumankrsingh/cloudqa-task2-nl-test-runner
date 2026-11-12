@@ -74,7 +74,7 @@ function describeError(e: unknown): string {
 
 // Each attempt has a time limit. Timeouts, network errors, 429 and 5xx are retried with a short backoff.
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<any> {
-  const maxAttempts = 4;
+  const maxAttempts = Number(process.env.LLM_MAX_ATTEMPTS) || 4;
   const timeoutMs = (Number(process.env.LLM_TIMEOUT_SECONDS) || 45) * 1000;
   let lastError = '';
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
