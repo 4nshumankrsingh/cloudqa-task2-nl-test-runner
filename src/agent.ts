@@ -41,6 +41,7 @@ export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunRe
   const browser = await chromium.launch({ headless: opts.headless, slowMo: opts.headless ? 0 : 250 });
   try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.addInitScript('window.__name = window.__name || ((f) => f);');
     const watch = (p: Page): void => { p.on('dialog', (d) => { void d.accept(); }); };
     context.on('page', watch);
     let page = await context.newPage();

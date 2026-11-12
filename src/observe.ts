@@ -27,6 +27,8 @@ const MAX_TEXT = 3000;
 // Describes the page to the model: every visible interactive element gets a number,
 // which is stamped on the element as data-qa-id so actions can find it again.
 export async function observe(page: Page): Promise<Observation> {
+  // tsx adds a __name helper to compiled code; the browser doesn't have it, so define a stand-in.
+  await page.evaluate('window.__name = window.__name || ((f) => f);');
   const snapshot = await page.evaluate(
     ({ maxElements, maxText }) => {
       const norm = (s: string | null | undefined): string => (s ?? '').replace(/\s+/g, ' ').trim();

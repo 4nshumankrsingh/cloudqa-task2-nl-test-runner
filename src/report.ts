@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { RunResult } from './types.js';
 
@@ -11,5 +11,6 @@ export function printResult(r: RunResult): void {
 }
 
 export async function saveResult(r: RunResult): Promise<void> {
+  await mkdir(r.outDir, { recursive: true });
   await writeFile(path.join(r.outDir, 'result.json'), JSON.stringify(r, null, 2), 'utf8');
 }
