@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "smoke": "tsx src/smoke.ts",
     "llm-smoke": "tsx src/llm-smoke.ts",
-    "qa": "tsx src/cli.ts"
+    "qa": "tsx src/cli.ts",
+    "observe": "tsx src/observe-check.ts"
   },
   "keywords": [],
   "author": "",
