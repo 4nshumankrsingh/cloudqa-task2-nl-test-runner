@@ -8,17 +8,28 @@ export interface LlmClient {
   callTool(system: string, messages: ChatMessage[], tool: ToolSpec): Promise<unknown>;
 }
 
-export function createLlm(env: NodeJS.ProcessEnv = process.env): LlmClient {
-  const provider = (env.LLM_PROVIDER ?? 'anthropic').toLowerCase();
-  const key = env.LLM_API_KEY;
-  const model = env.LLM_MODEL;
+// Providers that speak the OpenAI "chat completions" protocol, with default endpoints.
+const OPENAI_COMPATIBLE: Record<string, string> = {
+  openai: 'https://api.openai.com/v1',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  groq: 'https://api.groq.com/openai/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+};
+
+export function createLlm(env: Record<string, string | undefined> = process.env): LlmClient {
+  const provider = (env.LLM_PROVIDER ?? 'anthropic').trim().toLowerCase();
+  const key = env.LLM_API_KEY?.trim();
+  const model = env.LLM_MODEL?.trim();
   if (!key) throw new Error('LLM_API_KEY is not set. Copy .env.example to .env and fill it in.');
-  if (!model) throw new Error('LLM_MODEL is not set. Copy it from your provider\'s model list.');
+  if (!model) throw new Error("LLM_MODEL is not set. Copy a model name from your provider's list.");
+
   if (provider === 'anthropic') return new AnthropicClient(key, model);
-  if (provider === 'openai') {
-    return new OpenAiCompatClient(key, model, env.LLM_BASE_URL ?? 'https://api.openai.com/v1');
+
+  const baseUrl = env.LLM_BASE_URL?.trim() || OPENAI_COMPATIBLE[provider];
+  if (baseUrl) {
+    return new OpenAiCompatClient(provider, key, model, baseUrl, env.LLM_REASONING_EFFORT?.trim());
   }
-  throw new Error(`Unknown LLM_PROVIDER '${provider}'. Use 'anthropic' or 'openai'.`);
+  throw new Error(`Unknown LLM_PROVIDER '${provider}'. Use anthropic, openai, gemini, groq or openrouter.`);
 }
 
 // Retries rate limits (429) and server errors (5xx) with a short backoff.
@@ -75,8 +86,16 @@ class AnthropicClient implements LlmClient {
 
 class OpenAiCompatClient implements LlmClient {
   readonly label: string;
-  constructor(private key: string, private model: string, private baseUrl: string) {
-    this.label = `openai-compatible:${model}`;
+  private model: string;
+  constructor(
+    provider: string,
+    private key: string,
+    model: string,
+    private baseUrl: string,
+    private reasoningEffort?: string,
+  ) {
+    this.model = model.replace(/^models\//, ''); // some model lists prefix names with "models/"
+    this.label = `${provider}:${this.model}`;
   }
 
   async callTool(system: string, messages: ChatMessage[], tool: ToolSpec): Promise<unknown> {
@@ -87,7 +106,8 @@ class OpenAiCompatClient implements LlmClient {
         model: this.model,
         messages: [{ role: 'system', content: system }, ...messages],
         tools: [{ type: 'function', function: { name: tool.name, description: tool.description, parameters: tool.schema } }],
-        tool_choice: { type: 'function', function: { name: tool.name } },
+        tool_choice: 'required', // only one tool is offered, so this forces it
+        ...(this.reasoningEffort ? { reasoning_effort: this.reasoningEffort } : {}),
       },
     );
     const msg = data.choices?.[0]?.message;
