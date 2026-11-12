@@ -34,8 +34,9 @@ export function createLlm(env: Record<string, string | undefined> = process.env)
 
 // Retries rate limits (429) and server errors (5xx) with a short backoff.
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<any> {
+  const maxAttempts = 6;
   let lastError = '';
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json', ...headers },
@@ -45,9 +46,10 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
     const text = await res.text();
     lastError = `HTTP ${res.status}: ${text.slice(0, 300)}`;
     const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt === 4) break;
-    const waitSeconds = Number(res.headers.get('retry-after')) || 2 ** attempt;
-    await new Promise((resolve) => setTimeout(resolve, Math.min(waitSeconds, 30) * 1000));
+    if (!retryable || attempt === maxAttempts) break;
+    const waitSeconds = Math.min(Number(res.headers.get('retry-after')) || 2 ** attempt, 30);
+    console.warn(`Model busy (HTTP ${res.status}). Retry ${attempt}/${maxAttempts - 1} in ${waitSeconds}s...`);
+    await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
   }
   throw new Error(`LLM request failed. ${lastError}`);
 }
