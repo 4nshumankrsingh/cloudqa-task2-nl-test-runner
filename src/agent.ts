@@ -92,6 +92,7 @@ export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunRe
         continue;
       }
       const a = parsed.data;
+      if (a.action === 'type') a.text = unwrapInventedBraces(a.text, opts);
       if (opts.verbose && a.thought) console.log(`    why: ${a.thought}`);
 
       if (a.action === 'finish') {
@@ -161,4 +162,12 @@ async function observeWithRetry(page: Page): Promise<Observation> {
 
 async function shot(page: Page, dir: string, n: number): Promise<void> {
   await page.screenshot({ path: path.join(dir, `step-${String(n).padStart(2, '0')}.png`) }).catch(() => {});
+}
+// The model sometimes wraps a literal value from the test case in {{ }} as if it were a placeholder.
+function unwrapInventedBraces(text: string, opts: AgentOptions): string {
+  const m = text.match(/^\{\{\s*(.+?)\s*\}\}$/);
+  if (!m) return text;
+  const inner = m[1] as string;
+  if (inner in opts.vars) return text; // a real placeholder: leave it for substitution
+  return opts.test.includes(inner) ? inner : text; // a literal from the test case: drop the braces
 }

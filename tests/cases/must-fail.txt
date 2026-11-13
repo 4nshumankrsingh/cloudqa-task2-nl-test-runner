@@ -1,0 +1,5 @@
+# Every claim below is false, so every test must FAIL.
+[expect:FAIL] https://example.com | Verify the page shows the text Welcome back, Bob
+[expect:FAIL] https://the-internet.herokuapp.com/login | Log in with username tomsmith and password wrong-password-123 and verify the page says You logged into a secure area
+[expect:FAIL] https://www.saucedemo.com | Log in with username locked_out_user and password secret_sauce and verify the products page is shown
+[expect:FAIL] https://the-internet.herokuapp.com/add_remove_elements/ | Verify the page has a Checkout button
