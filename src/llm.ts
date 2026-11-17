@@ -97,7 +97,8 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
     }
     if (!retryable || attempt === maxAttempts) break;
     const waitSeconds = Math.min(retryAfterSeconds || 2 ** attempt, 30);
-    console.warn(`  Model not answering (${lastError.slice(0, 80)}). Retry ${attempt}/${maxAttempts - 1} in ${waitSeconds}s...`);
+    const shown = lastError.startsWith('HTTP ') ? (lastError.split(':')[0] ?? lastError) : lastError.replace(/\s+/g, ' ').slice(0, 90);
+    console.warn(`  Model not answering (${shown}). Retry ${attempt}/${maxAttempts - 1} in ${waitSeconds}s...`);
     await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
   }
   throw new Error(`LLM request failed. ${lastError}`);
