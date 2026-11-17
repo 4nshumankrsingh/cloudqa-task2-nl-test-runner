@@ -1,0 +1,4 @@
+# Count checks. The first two are true; the last is the false claim that fooled the tool.
+https://the-internet.herokuapp.com/add_remove_elements/ | Click the Add Element button twice and verify there are 2 Delete buttons
+https://the-internet.herokuapp.com/add_remove_elements/ | Click the Add Element button once and verify there is 1 Delete button
+[expect:FAIL] https://the-internet.herokuapp.com/add_remove_elements/ | Click the Add Element button once and verify there are 2 Delete buttons
