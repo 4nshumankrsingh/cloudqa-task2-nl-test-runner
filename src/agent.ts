@@ -118,7 +118,11 @@ export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunRe
       const sig = JSON.stringify([a.action, 'id' in a ? a.id : '', 'text' in a ? a.text : '']);
       repeat = sig === lastSig ? repeat + 1 : 1;
       lastSig = sig;
-      if (repeat >= 3) hint = 'You have repeated the same action 3 times. Try something different, or finish FAIL if you are stuck.';
+      if (repeat >= 2 && res.ok && a.action.startsWith('assert')) {
+        hint = 'This assertion already passed. If it proves the expected outcome, finish PASS now; do not repeat it.';
+      } else if (repeat >= 3) {
+        hint = 'You have repeated the same action 3 times. Try something different, or finish FAIL if you are stuck.';
+      }
 
       await shot(page, opts.outDir, n);
     }

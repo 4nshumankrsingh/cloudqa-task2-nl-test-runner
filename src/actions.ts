@@ -20,6 +20,7 @@ export const ActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('assert_text'), text: z.string().min(1), thought }),
   z.object({ action: z.literal('assert_no_text'), text: z.string().min(1), thought }),
   z.object({ action: z.literal('assert_url'), text: z.string().min(1), thought }),
+  z.object({ action: z.literal('assert_count'), text: z.string().min(1), count: z.coerce.number().int().min(0), thought }),
   z.object({ action: z.literal('finish'), verdict: z.enum(['PASS', 'FAIL']), reason: z.string().min(1), thought }),
 ]);
 export type Action = z.infer<typeof ActionSchema>;
@@ -35,7 +36,7 @@ export const NEXT_ACTION_TOOL: ToolSpec = {
       action: {
         type: 'string',
         enum: ['goto', 'click', 'type', 'select', 'press', 'scroll', 'wait',
-               'assert_text', 'assert_no_text', 'assert_url', 'finish'],
+               'assert_text', 'assert_no_text', 'assert_url', 'assert_count', 'finish'],
         description: 'The action to perform.',
       },
       id: { type: 'integer', description: 'Element id from the current list (click, type, select).' },
@@ -47,6 +48,7 @@ export const NEXT_ACTION_TOOL: ToolSpec = {
       key: { type: 'string', description: 'Key to press, for example Enter, Tab or Escape (press).' },
       submit: { type: 'boolean', description: 'type: press Enter after typing.' },
       ms: { type: 'integer', description: 'Milliseconds to wait, at most 10000 (wait).' },
+            count: { type: 'integer', description: 'assert_count: how many times the text should appear on the page.' },
       verdict: { type: 'string', enum: ['PASS', 'FAIL'], description: 'finish: the test result.' },
       reason: { type: 'string', description: 'finish: what you observed and why this is the verdict.' },
     },
@@ -134,7 +136,13 @@ export async function execute(page: Page, a: Action, vars: Vars): Promise<ExecRe
         const ok = normalize(page.url()).includes(normalize(substitute(a.text, vars)));
         return { ok, note: ok ? `URL contains '${a.text}'` : `URL does NOT contain '${a.text}' (it is ${page.url()})` };
       }
-
+      case 'assert_count': {
+        const body = normalize(await page.evaluate(() => document.body.innerText));
+        const needle = normalize(substitute(a.text, vars));
+        const found = needle ? body.split(needle).length - 1 : 0;
+        const ok = found === a.count;
+        return { ok, note: ok ? `'${a.text}' appears ${found} time(s)` : `'${a.text}' appears ${found} time(s), not ${a.count}` };
+      }
       case 'finish':
         return { ok: true, note: 'finished' };
     }

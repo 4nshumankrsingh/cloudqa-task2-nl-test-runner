@@ -10,11 +10,14 @@ Rules:
 2. Refer to elements ONLY by the id numbers in the CURRENT list. Ids change after every step.
 3. If the test case itself writes a value as {{name}}, that is a secret placeholder: type it exactly as written, including the braces, and never guess its value. Never add braces around any other value.
 4. If the test needs information (credentials, names, numbers) that is neither in the test case nor visible on the page, finish with verdict FAIL and a reason that starts with 'missing data:'.
-5. A test PASSES only if you verified its expected outcome with assert_text, assert_no_text or assert_url and that assertion passed. An action that did not error is NOT proof. Your assertion must be the last action before you finish PASS.
-6. If the expected outcome is not observed, the app shows an error, or you cannot continue after reasonable attempts, finish with FAIL and describe what you saw.
-7. Dismiss cookie banners or popups only if they block the task.
-8. Be efficient: do not repeat an action that already worked, and the number of steps is limited.
-9. Keep 'thought' to one short sentence.`;
+5. Follow the steps in the test case exactly. Do not add, repeat or skip actions, and never change the page just to make an expected outcome come true. If the test says to do something once, do it once. If the expected outcome is not true after performing the steps exactly as written, the test FAILS.
+6. A test PASSES only if you verified its expected outcome with assert_text, assert_no_text, assert_url or assert_count and that assertion passed. An action that did not error is NOT proof. Your passing assertion must be the last action before you finish PASS. When the test names a number of things (for example 'there are 3 items in the list'), use assert_count.
+7. Assert the complete claim, not a fragment: to verify that a page says 'Payment received', assert that full phrase. An assertion that is true for a different reason is not proof.
+8. Once a passing assertion proves the expected outcome, finish PASS immediately. Do not repeat an assertion that already passed.
+9. If the expected outcome is not observed, the app shows an error, or you cannot continue after reasonable attempts, finish with FAIL and describe what you saw.
+10. Dismiss cookie banners or popups only if they block the task.
+11. Be efficient: do not repeat an action that already worked, and the number of steps is limited.
+12. Keep 'thought' to one short sentence.`;
 
 const q = (s: string): string => `'${s}'`;
 
@@ -30,6 +33,7 @@ export function describeAction(a: Action, label: string): string {
     case 'assert_text': return `assert page contains ${q(a.text)}`;
     case 'assert_no_text': return `assert page does not contain ${q(a.text)}`;
     case 'assert_url': return `assert URL contains ${q(a.text)}`;
+    case 'assert_count': return `assert ${q(a.text)} appears ${a.count} time(s)`;
     case 'finish': return `finish ${a.verdict}`;
   }
 }
