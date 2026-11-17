@@ -1,0 +1,4 @@
+# Harder cases: all expected to PASS.
+https://www.saucedemo.com | Log in with username standard_user and password secret_sauce, add the Sauce Labs Backpack to the cart, open the cart and verify the Sauce Labs Backpack is listed in the cart
+https://the-internet.herokuapp.com/dynamic_loading/1 | Click the Start button and verify the page shows the text Hello World!
+https://en.wikipedia.org | Search for Alan Turing and verify the page shows the heading Alan Turing
