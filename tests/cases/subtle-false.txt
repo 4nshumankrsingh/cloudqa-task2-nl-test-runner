@@ -2,5 +2,5 @@
 [expect:FAIL] https://the-internet.herokuapp.com/login | Log in with username tomsmith and password SuperSecretPassword! and verify the page says Welcome to the dashboard
 [expect:FAIL] https://www.saucedemo.com | Log in with username standard_user and password secret_sauce and verify the page shows a product called Sauce Labs Rocket
 [expect:FAIL] https://the-internet.herokuapp.com/add_remove_elements/ | Click the Add Element button once and verify there are 2 Delete buttons
-[expect:FAIL] https://example.com | Verify the page shows the heading Example Domain and a Sign in button
+[expect:FAIL] https://example.com | Verify the page shows a Learn more link and a Sign in button
 [expect:FAIL] https://the-internet.herokuapp.com/login | Without logging in, verify the page says You logged into a secure area
