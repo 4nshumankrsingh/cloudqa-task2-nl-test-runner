@@ -14,7 +14,7 @@ Rules:
 6. A test PASSES only if you verified its expected outcome with assert_text, assert_no_text, assert_url or assert_count and that assertion passed. An action that did not error is NOT proof. Your passing assertion must be the last action before you finish PASS. When the test names a number of things (for example 'there are 3 items in the list'), use assert_count.
 7. Assert the complete claim, not a fragment: to verify that a page says 'Payment received', assert that full phrase. An assertion that is true for a different reason is not proof.
 8. Once a passing assertion proves the expected outcome, finish PASS immediately. Do not repeat an assertion that already passed.
-9. If the expected outcome is not observed, the app shows an error, or you cannot continue after reasonable attempts, finish with FAIL and describe what you saw.
+9. If the expected outcome is not observed, the app shows an error, or you cannot continue after reasonable attempts, finish with FAIL and describe what you saw. If an assertion fails, never click, type or navigate to try to make it pass; you may wait or scroll and check again, otherwise finish FAIL.
 10. Dismiss cookie banners or popups only if they block the task.
 11. Be efficient: do not repeat an action that already worked, and the number of steps is limited.
 12. Keep 'thought' to one short sentence.`;

@@ -17,6 +17,9 @@ export type AgentOptions = {
   verbose: boolean;
 };
 
+// Actions that change the page. If one succeeds after an assertion has failed, a later PASS is not trusted.
+const STATE_CHANGING: string[] = ['click', 'type', 'select', 'press', 'goto'];
+
 export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunResult> {
   const started = Date.now();
   const steps: StepLog[] = [];
@@ -41,21 +44,31 @@ export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunRe
   const browser = await chromium.launch({ headless: opts.headless, slowMo: opts.headless ? 0 : 250 });
   try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    // tsx adds a __name helper to compiled code; the browser does not have it, so define a stand-in.
     await context.addInitScript('window.__name = window.__name || ((f) => f);');
     const watch = (p: Page): void => { p.on('dialog', (d) => { void d.accept(); }); };
     context.on('page', watch);
     let page = await context.newPage();
 
     if (opts.startUrl) {
-      try {
-        await page.goto(opts.startUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      } catch (e) {
-        return done('ERROR', `could not open ${opts.startUrl}: ${firstLine(e)}`);
+      let opened = false;
+      let lastError = '';
+      for (let attempt = 1; attempt <= 3 && !opened; attempt++) {
+        try {
+          await page.goto(opts.startUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          opened = true;
+        } catch (e) {
+          lastError = firstLine(e);
+          console.log(`  could not open the page (attempt ${attempt}/3): ${lastError}`);
+        }
       }
+      if (!opened) return done('ERROR', `could not open ${opts.startUrl}: ${lastError}`);
     }
 
     let invalid = 0;
     let lastAssertOk: boolean | null = null;
+    let failedAssert = false;
+    let changedAfterFail = false;
     let lastSig = '';
     let repeat = 0;
     let hint = '';
@@ -96,10 +109,17 @@ export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunRe
       if (opts.verbose && a.thought) console.log(`    why: ${a.thought}`);
 
       if (a.action === 'finish') {
+        // A PASS reached by changing the page after an assertion failed is not trusted.
+        if (a.verdict === 'PASS' && changedAfterFail) {
+          steps.push({ n, thought: a.thought ?? '', description: 'finish PASS (refused)', ok: false, note: 'the page was changed after an assertion failed', url: obs.url });
+          console.log(`  step ${n}: PASS refused, the page was changed after an assertion failed`);
+          await shot(page, opts.outDir, n);
+          return done('FAIL', 'The claim did not hold when the steps were followed as written: an assertion failed, the page was then changed, and a later assertion passed. A PASS reached that way is not trusted.');
+        }
         if (a.verdict === 'PASS' && lastAssertOk !== true) {
           steps.push({ n, thought: a.thought ?? '', description: 'finish PASS (rejected)', ok: false, note: 'PASS needs a passing assertion as the last action', url: obs.url });
           console.log(`  step ${n}: PASS rejected, no passing assertion yet`);
-          hint = 'You tried to finish with PASS, but your latest action was not a passing assertion. Run assert_text, assert_no_text or assert_url that proves the expected outcome, or finish FAIL.';
+          hint = 'You tried to finish with PASS, but your latest action was not a passing assertion. Run assert_text, assert_no_text, assert_url or assert_count that proves the expected outcome, or finish FAIL.';
           continue;
         }
         steps.push({ n, thought: a.thought ?? '', description: `finish ${a.verdict}`, ok: a.verdict === 'PASS', note: a.reason, url: obs.url });
@@ -113,7 +133,13 @@ export async function runTest(llm: LlmClient, opts: AgentOptions): Promise<RunRe
       const description = describeAction(a, label);
       steps.push({ n, thought: a.thought ?? '', description, ok: res.ok, note: res.note, url: obs.url });
       console.log(`  step ${n}: ${description} -> ${res.ok ? 'ok' : 'FAILED'} (${res.note})`);
+
       lastAssertOk = a.action.startsWith('assert') ? res.ok : null;
+      if (a.action.startsWith('assert')) {
+        if (!res.ok) failedAssert = true;
+      } else if (failedAssert && res.ok && STATE_CHANGING.includes(a.action)) {
+        changedAfterFail = true;
+      }
 
       const sig = JSON.stringify([a.action, 'id' in a ? a.id : '', 'text' in a ? a.text : '']);
       repeat = sig === lastSig ? repeat + 1 : 1;
@@ -167,6 +193,7 @@ async function observeWithRetry(page: Page): Promise<Observation> {
 async function shot(page: Page, dir: string, n: number): Promise<void> {
   await page.screenshot({ path: path.join(dir, `step-${String(n).padStart(2, '0')}.png`) }).catch(() => {});
 }
+
 // The model sometimes wraps a literal value from the test case in {{ }} as if it were a placeholder.
 function unwrapInventedBraces(text: string, opts: AgentOptions): string {
   const m = text.match(/^\{\{\s*(.+?)\s*\}\}$/);
